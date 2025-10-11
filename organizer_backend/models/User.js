@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   contact: String,
   password: String,
-  profilePicture: String,
+  profilePicture: String, // store Base64 string
   foodPreference: { type: String, enum: ['Veg', 'Non-Veg', 'Combo'] }
 }, { timestamps: true });
 
