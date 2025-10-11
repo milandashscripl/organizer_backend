@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js"
   },
-  "proxy": "https://https://tutorji.onrender.com",
+  "proxy": "https://organizer-backend-gg1f.onrender.com",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",

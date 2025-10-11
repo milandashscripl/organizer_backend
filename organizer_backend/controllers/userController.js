@@ -6,11 +6,9 @@ const jwt = require('jsonwebtoken');
 // Register User
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, contact, aadhar, address, password, campusName, seatNumber } = req.body;
+    const { name, email, contact, address, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate studentId dynamically
-    const studentId = `${campusName}-${seatNumber}`;
 
     // Get the Cloudinary URL of the uploaded file
     const profilePicture = req.file?.path;
@@ -19,12 +17,8 @@ exports.registerUser = async (req, res) => {
       name,
       email,
       contact,
-      aadhar,
       address,
       password: hashedPassword,
-      campusName,
-      seatNumber,
-      studentId, // Auto-generated
       profilePicture, // Save the Cloudinary URL
     });
 
@@ -57,11 +51,7 @@ exports.loginUser = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 contact: user.contact,
-                aadhar: user.aadhar,
                 address: user.address,
-                campusName: user.campusName,
-                seatNumber: user.seatNumber,
-                studentId: user.studentId,
                 profilePicture: user.profilePicture,
             },
             userId: user._id, // Include userId for backward compatibility
@@ -85,11 +75,7 @@ exports.getUserProfile = async (req, res) => {
       name: user.name,
       email: user.email,
       contact: user.contact,
-      aadhar: user.aadhar,
       address: user.address,
-      campusName: user.campusName,
-      seatNumber: user.seatNumber,
-      studentId: user.studentId,
       profilePicture: user.profilePicture,
     });
   } catch (err) {
@@ -116,7 +102,6 @@ exports.updateUser = async (req, res) => {
       name: req.body.name,
       email: req.body.email,
       contact: req.body.contact,
-      aadhar: req.body.aadhar,
       address: req.body.address,
     };
 
