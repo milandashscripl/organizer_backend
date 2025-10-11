@@ -1,10 +1,17 @@
 const express = require('express');
-const router = express.Router();
 const { registerUser, loginUser, getUserProfile } = require('../controllers/userController');
-const authenticateToken = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
+const multer = require('multer');
 
-router.post('/register', registerUser);
+const router = express.Router();
+
+// Configure multer
+const storage = multer.memoryStorage(); // store in memory
+const upload = multer({ storage });
+
+// Register route
+router.post('/register', upload.single('profilePicture'), registerUser);
 router.post('/login', loginUser);
-router.get('/profile', authenticateToken, getUserProfile); // Protected route
+router.get('/profile', protect, getUserProfile);
 
 module.exports = router;
