@@ -1,17 +1,25 @@
 const express = require('express');
-const { registerUser, loginUser, getUserProfile } = require('../controllers/userController');
-const { protect } = require('../middleware/authMiddleware');
 const multer = require('multer');
-
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../config/cloudinaryConfig');
+const { registerUser, loginUser, getUserProfile, getAllUsers } = require('../controllers/userController');
 const router = express.Router();
 
-// Configure multer
-const storage = multer.memoryStorage();
+
+// Configure Cloudinary storage with multer
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'profile_pictures', // Cloudinary folder name
+    allowed_formats: ['jpg', 'jpeg', 'png'], // Allowed file types
+  },
+});
+
 const upload = multer({ storage });
 
-// Correct usage: pass **both multer middleware and controller**
+// Routes
 router.post('/register', upload.single('profilePicture'), registerUser);
 router.post('/login', loginUser);
-router.get('/profile', protect, getUserProfile);
-
+router.get('/profile/:id', getUserProfile);
+router.get('/all', getAllUsers); // API endpoint to fetch all users
 module.exports = router;
