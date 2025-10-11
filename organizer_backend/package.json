@@ -1,14 +1,17 @@
 {
   "name": "organizer_backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend service for Organizer App",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
+  "engines": {
+    "node": "22.x"
+  },
   "keywords": [],
-  "author": "",
+  "author": "Milan Kumar Dash",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^3.0.2",
