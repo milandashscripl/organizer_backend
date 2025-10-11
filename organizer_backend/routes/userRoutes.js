@@ -6,10 +6,10 @@ const multer = require('multer');
 const router = express.Router();
 
 // Configure multer
-const storage = multer.memoryStorage(); // store in memory
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Register route
+// Correct usage: pass **both multer middleware and controller**
 router.post('/register', upload.single('profilePicture'), registerUser);
 router.post('/login', loginUser);
 router.get('/profile', protect, getUserProfile);
