@@ -144,8 +144,8 @@ exports.getAllUsers = async (req, res) => {
 // ✅ Add Friend
 exports.addFriend = async (req, res) => {
   try {
-    const userId = req.body.userId;  // ID of the logged-in user
-    const friendId = req.params.id;  // ID of the person being added
+    const { userId } = req.body;
+    const friendId = req.params.id;
 
     if (userId === friendId) {
       return res.status(400).json({ message: "You can't add yourself as a friend" });
@@ -158,11 +158,14 @@ exports.addFriend = async (req, res) => {
       return res.status(404).json({ message: "User or friend not found" });
     }
 
+    // ✅ Ensure both arrays exist
+    user.friends = user.friends || [];
+    friend.friends = friend.friends || [];
+
     if (user.friends.includes(friendId)) {
       return res.status(400).json({ message: "Already friends" });
     }
 
-    // Add friend to both users
     user.friends.push(friendId);
     friend.friends.push(userId);
 
@@ -170,8 +173,10 @@ exports.addFriend = async (req, res) => {
     await friend.save();
 
     res.status(200).json({ message: "Friend added successfully", user });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 };
+
 
