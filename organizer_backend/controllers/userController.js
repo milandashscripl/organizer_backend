@@ -150,21 +150,3 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-exports.getAllTeachers = async (req, res) => {
-  try {
-    const teachers = await User.find({ position: 'teacher' }); // Fetch only teachers
-    res.status(200).json(teachers);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-exports.getAllStudents = async (req, res) => {
-  try {
-    const students = await User.find({ position: 'student' }); // Fetch only teachers
-    res.status(200).json(students);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
