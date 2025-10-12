@@ -86,18 +86,16 @@ exports.getUserProfile = async (req, res) => {
 
 
 
-// Update User
+// ✅ Update User (Fixed)
 exports.updateUser = async (req, res) => {
   try {
     const userId = req.params.id;
 
-    // Fetch the existing user data
     const existingUser = await User.findById(userId);
     if (!existingUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Collect updated data from the request body
     const updatedData = {
       name: req.body.name,
       email: req.body.email,
@@ -105,20 +103,12 @@ exports.updateUser = async (req, res) => {
       address: req.body.address,
     };
 
-    // If a new profile picture is uploaded, update it
-    if (req.file) {
-      updatedData.profilePicture = req.file.path; // Cloudinary or file path
+    // ✅ If new image uploaded, update it
+    if (req.file && req.file.path) {
+      updatedData.profilePicture = req.file.path;
     }
 
-    // If campusName or seatNumber is updated, regenerate studentId
-    const newCampusName = req.body.campusName || existingUser.campusName;
-    const newSeatNumber = req.body.seatNumber || existingUser.seatNumber;
-
-    updatedData.campusName = newCampusName;
-    updatedData.seatNumber = newSeatNumber;
-    updatedData.studentId = `${newCampusName}-${newSeatNumber}`;
-
-    // Hash password if provided
+    // ✅ If new password provided, hash it
     if (req.body.password) {
       updatedData.password = await bcrypt.hash(req.body.password, 10);
     }
@@ -130,14 +120,13 @@ exports.updateUser = async (req, res) => {
       }
     });
 
-    // Update the user in the database
     const user = await User.findByIdAndUpdate(userId, updatedData, { new: true });
-
     res.json({ message: 'User updated successfully!', user });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 
 
