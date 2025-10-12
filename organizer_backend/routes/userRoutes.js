@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinaryConfig');
-const { registerUser, loginUser, getUserProfile, getAllUsers, updateUser } = require('../controllers/userController');
+const { registerUser, loginUser, getUserProfile, getAllUsers, updateUser, addFriend } = require('../controllers/userController');
 
 const router = express.Router();
 
@@ -23,5 +23,7 @@ router.post('/login', loginUser);
 router.get('/profile/:id', getUserProfile);
 router.get('/all', getAllUsers);
 router.put('/updateProfile/:id', upload.single('profilePicture'), updateUser); // ✅ Fixed line
+router.post('/addFriend/:id', addFriend);
+
 
 module.exports = router;
