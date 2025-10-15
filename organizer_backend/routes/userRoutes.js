@@ -23,7 +23,10 @@ router.post('/login', loginUser);
 router.get('/profile/:id', getUserProfile);
 router.get('/all', getAllUsers);
 router.put('/updateProfile/:id', upload.single('profilePicture'), updateUser); // ✅ Fixed line
-router.post('/addFriend/:id', addFriend);
+router.post('/sendRequest/:id', userController.sendFriendRequest);
+router.post('/acceptRequest/:id', userController.acceptFriendRequest);
+router.post('/rejectRequest/:id', userController.rejectFriendRequest);
+
 
 
 module.exports = router;

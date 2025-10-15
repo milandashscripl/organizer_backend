@@ -7,11 +7,9 @@ const userSchema = new mongoose.Schema({
   address: String,
   contact: String,
   profilePicture: String,
-  friends: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: "User",
-    default: [], // ✅ This ensures it's always an array
-  },
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  sentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 });
 
 module.exports = mongoose.model("User", userSchema);
