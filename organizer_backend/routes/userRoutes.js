@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinaryConfig');
+const { protect } = require('../middleware/authMiddleware');
 const {
   registerUser,
   loginUser,
@@ -32,7 +33,7 @@ const upload = multer({ storage });
 router.post('/register', upload.single('profilePicture'), registerUser);
 router.post('/login', loginUser);
 router.get('/profile/:id', getUserProfile);
-router.get('/me', getCurrentUser);
+router.get('/me', protect, getCurrentUser);
 router.get('/all', getAllUsers);
 router.put('/updateProfile/:id', upload.single('profilePicture'), updateUser);
 
