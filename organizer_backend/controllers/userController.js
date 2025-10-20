@@ -42,7 +42,7 @@ exports.loginUser = async (req, res) => {
     res.json({
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         contact: user.contact,
@@ -69,13 +69,20 @@ exports.getUserProfile = async (req, res) => {
 // ✅ Get current logged-in user (simplified)
 exports.getCurrentUser = async (req, res) => {
   try {
-    // If you are not using token middleware yet, this fallback works for now
-    const users = await User.find();
-    return res.status(200).json(users[0]); // 🧠 returns first user for test (you can replace with real token logic)
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'No token' });
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select('-password');
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(401).json({ error: 'Invalid token' });
   }
 };
+
 
 // ✅ Update user
 exports.updateUser = async (req, res) => {
