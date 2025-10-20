@@ -85,6 +85,28 @@ exports.getUserProfile = async (req, res) => {
 
 
 
+// ✅ GET /api/me
+export const getCurrentUser = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // req.user is set by verifyToken middleware
+    const user = await User.findById(req.user._id)
+      .select("-password")
+      .populate("friends", "name email profilePicture");
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Get current user error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+
 
 // ✅ Update User (Fixed)
 exports.updateUser = async (req, res) => {
