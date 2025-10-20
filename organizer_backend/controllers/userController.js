@@ -92,8 +92,15 @@ exports.updateUser = async (req, res) => {
     if (req.body.password)
       updatedData.password = await bcrypt.hash(req.body.password, 10);
 
-    const user = await User.findByIdAndUpdate(userId, updatedData, { new: true });
-    res.json({ message: 'User updated successfully', user });
+    const updateData = { ...req.body };
+delete updateData.email; // prevent duplicate email check
+
+const updatedUser = await User.findByIdAndUpdate(
+  userId,
+  updateData,
+  { new: true }
+);
+    res.json({ message: 'User updated successfully', updatedUser });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
