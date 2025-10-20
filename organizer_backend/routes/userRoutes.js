@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinaryConfig');
-const { registerUser, loginUser, getUserProfile, getAllUsers, updateUser, sendFriendRequest, acceptFriendRequest, rejectFriendRequest } = require('../controllers/userController');
+const { registerUser, loginUser, getUserProfile, getAllUsers, updateUser, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, getCurrentUser } = require('../controllers/userController');
 
 const router = express.Router();
 
@@ -21,7 +21,7 @@ const upload = multer({ storage });
 router.post('/register', upload.single('profilePicture'), registerUser);
 router.post('/login', loginUser);
 router.get('/profile/:id', getUserProfile);
-router.get('/me', getUserProfile);
+router.get('/me', getCurrentUser);
 router.get('/all', getAllUsers);
 router.put('/updateProfile/:id', upload.single('profilePicture'), updateUser); // ✅ Fixed line
 router.post('/sendRequest/:id', sendFriendRequest);

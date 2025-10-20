@@ -86,7 +86,7 @@ exports.getUserProfile = async (req, res) => {
 
 
 // ✅ GET /api/me
-export const getCurrentUser = async (req, res) => {
+exports.getCurrentUser = async (req, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
