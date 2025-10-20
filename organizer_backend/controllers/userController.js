@@ -221,3 +221,21 @@ exports.getFriendRequests = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+module.exports = {
+  registerUser: exports.registerUser,
+  loginUser: exports.loginUser,
+  getUserProfile: exports.getUserProfile,
+  getCurrentUser: exports.getCurrentUser,
+  updateUser: exports.updateUser,
+  getAllUsers: exports.getAllUsers,
+  sendFriendRequest: exports.sendFriendRequest,
+  acceptFriendRequest: exports.acceptFriendRequest,
+  rejectFriendRequest: exports.rejectFriendRequest,
+  getFriends: exports.getFriends,
+  getFriendRequests: exports.getFriendRequests
+};
+
+
+
