@@ -84,34 +84,38 @@ exports.getCurrentUser = async (req, res) => {
 };
 
 
-// ✅ Update user
 exports.updateUser = async (req, res) => {
   try {
     const userId = req.params.id;
-    const updatedData = {
-      name: req.body.name,
-      email: req.body.email,
-      contact: req.body.contact,
-      address: req.body.address,
-    };
+    const updateData = {};
 
-    if (req.file?.path) updatedData.profilePicture = req.file.path;
-    if (req.body.password)
-      updatedData.password = await bcrypt.hash(req.body.password, 10);
+    if (req.body.name) updateData.name = req.body.name;
+    if (req.body.contact) updateData.contact = req.body.contact;
+    if (req.body.address) updateData.address = req.body.address;
 
-    const updateData = { ...req.body };
-delete updateData.email; // prevent duplicate email check
+    // handle optional password update
+    if (req.body.password) {
+      updateData.password = await bcrypt.hash(req.body.password, 10);
+    }
 
-const updatedUser = await User.findByIdAndUpdate(
-  userId,
-  updateData,
-  { new: true }
-);
-    res.json({ message: 'User updated successfully', updatedUser });
+    // handle image upload
+    if (req.file) {
+      updateData.profilePicture = `${req.protocol}://${req.get("host")}/${req.file.path}`;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({ message: "User updated successfully", updatedUser });
   } catch (err) {
+    console.error("Update user error:", err);
     res.status(500).json({ error: err.message });
   }
 };
+
 
 // ✅ Get all users
 exports.getAllUsers = async (req, res) => {
