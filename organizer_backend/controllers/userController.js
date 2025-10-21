@@ -83,31 +83,40 @@ exports.getCurrentUser = async (req, res) => {
   }
 };
 
+
 exports.updateUser = async (req, res) => {
   try {
     const userId = req.params.id;
     const updateData = {};
 
+    // ✅ Basic text fields
     if (req.body.name) updateData.name = req.body.name;
     if (req.body.contact) updateData.contact = req.body.contact;
     if (req.body.address) updateData.address = req.body.address;
 
+    // ✅ Handle password update
     if (req.body.password) {
       updateData.password = await bcrypt.hash(req.body.password, 10);
     }
 
-    // ✅ Add profile picture if uploaded
-    if (req.file) {
-      updateData.profilePicture = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+    // ✅ Cloudinary auto upload: multer-storage-cloudinary gives you the URL
+    if (req.file && req.file.path) {
+      updateData.profilePicture = req.file.path; // secure Cloudinary URL
     }
 
+    // ✅ Update user in MongoDB
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
 
-    if (!updatedUser) return res.status(404).json({ error: "User not found" });
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-    res.json({ message: "User updated successfully", updatedUser });
+    res.json({
+      message: 'User updated successfully',
+      updatedUser,
+    });
   } catch (error) {
-    console.error("Update user error:", error);
+    console.error('Update user error:', error);
     res.status(500).json({ error: error.message });
   }
 };
