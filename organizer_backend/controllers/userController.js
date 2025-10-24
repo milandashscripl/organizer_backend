@@ -1,59 +1,164 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const transporter = require("../config/nodemailer");
 
 // ✅ Register
+// exports.registerUser = async (req, res) => {
+//   try {
+//     const { name, email, contact, address, password } = req.body;
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const profilePicture = req.file?.path;
+
+//     const newUser = new User({
+//       name,
+//       email,
+//       contact,
+//       address,
+//       password: hashedPassword,
+//       profilePicture,
+//     });
+
+//     await newUser.save();
+//     res.status(201).json({ message: 'User registered successfully!' });
+//   } catch (err) {
+//     res.status(400).json({ error: err.message });
+//   }
+// };
+
+
+// REGISTER
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, contact, address, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const profilePicture = req.file?.path;
+    const { name, email, password, address, contact } = req.body;
 
-    const newUser = new User({
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ message: "Email already registered" });
+
+    const user = new User({
       name,
       email,
-      contact,
+      password,
       address,
-      password: hashedPassword,
-      profilePicture,
+      contact,
+      profilePicture: req.file ? req.file.path : "",
     });
 
-    await newUser.save();
-    res.status(201).json({ message: 'User registered successfully!' });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    // Create verification token
+    const verificationToken = jwt.sign(
+      { email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+    user.verificationToken = verificationToken;
+
+    await user.save();
+
+    // Send verification email
+    const verifyUrl = `https://organizer-backend-gg1f.onrender.com/api/users/verify-email/${verificationToken}`;
+
+    await transporter.sendMail({
+      from: `"Organizer" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Verify your email",
+      html: `
+        <h2>Welcome, ${name}!</h2>
+        <p>Click the button below to verify your email:</p>
+        <a href="${verifyUrl}" 
+           style="display:inline-block;padding:10px 20px;background:#6a1b9a;color:white;border-radius:5px;text-decoration:none;">
+           Verify Email
+        </a>
+        <p>This link expires in 24 hours.</p>
+      `,
+    });
+
+    res.json({
+      message: "Registered successfully! Please check your email to verify your account.",
+    });
+  } catch (error) {
+    console.error("Register error:", error);
+    res.status(500).json({ message: "Registration failed" });
   }
 };
 
+
+exports.verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findOne({ email: decoded.email });
+
+    if (!user) return res.status(400).send("Invalid token or user not found");
+    if (user.emailVerified) return res.send("Email already verified!");
+
+    user.emailVerified = true;
+    user.verificationToken = null;
+    await user.save();
+
+    res.send(`<h2>Email verified successfully!</h2><p>You can now log in to Organizer.</p>`);
+  } catch (err) {
+    res.status(400).send("Verification link expired or invalid.");
+  }
+};
+
+
 // ✅ Login
+// exports.loginUser = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+//     const user = await User.findOne({ email });
+
+//     if (!user || !(await bcrypt.compare(password, user.password))) {
+//       return res.status(401).json({ message: 'Invalid credentials' });
+//     }
+
+//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+//       expiresIn: '1h',
+//     });
+
+//     res.json({
+//       token,
+//       user: {
+//         _id: user._id,
+//         name: user.name,
+//         email: user.email,
+//         contact: user.contact,
+//         address: user.address,
+//         profilePicture: user.profilePicture,
+//       },
+//     });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+    if (!user) return res.status(400).json({ message: "User not found" });
+    if (user.password !== password)
+      return res.status(400).json({ message: "Invalid credentials" });
+
+    if (!user.emailVerified) {
+      return res.status(403).json({
+        message: "Please verify your email before logging in.",
+      });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
     });
 
-    res.json({
-      token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        contact: user.contact,
-        address: user.address,
-        profilePicture: user.profilePicture,
-      },
-    });
+    res.json({ token, user });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ message: "Login failed" });
   }
 };
+
 
 // ✅ Get profile by ID
 exports.getUserProfile = async (req, res) => {
@@ -244,7 +349,8 @@ module.exports = {
   acceptFriendRequest: exports.acceptFriendRequest,
   rejectFriendRequest: exports.rejectFriendRequest,
   getFriends: exports.getFriends,
-  getFriendRequests: exports.getFriendRequests
+  getFriendRequests: exports.getFriendRequests,
+  verifyEmail: exports.verifyEmail
 };
 
 

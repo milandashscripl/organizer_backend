@@ -9,6 +9,8 @@ const userSchema = new mongoose.Schema({
   profilePicture: String,
   friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  emailVerified: { type: Boolean, default: false },
+  verificationToken: String, // token for email verification
 });
 
 module.exports = mongoose.model("User", userSchema);

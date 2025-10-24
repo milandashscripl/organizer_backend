@@ -23,6 +23,7 @@ router.get('/profile/:id', userController.getUserProfile);
 router.get('/me', userController.getCurrentUser);
 router.get('/all', userController.getAllUsers);
 router.put('/updateProfile/:id', upload.single('profilePicture'), userController.updateUser);
+router.get('/verify-email/:token', userController.verifyEmail);
 
 // ✅ Friend System
 router.post('/:currentUserId/send-request/:friendId', userController.sendFriendRequest);
