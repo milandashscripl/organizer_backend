@@ -1,23 +1,26 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const userRouter = require('./routes/userRoutes');
-require('dotenv').config();
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+require("dotenv").config();
+
+const otpRoutes = require("./routes/otpRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Middleware
 app.use(cors());
-app.use(bodyParser.json());
-app.use('/uploads', express.static('uploads'));
-app.use('/api/users', userRouter);
+app.use(express.json());
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => app.listen(PORT, () => console.log(`✅ DB Connected & Server running on port ${PORT}`)))
-.catch(err => console.log('❌ DB Connection Error:', err));
+app.use("/api/otp", otpRoutes);
+app.use("/api/users", userRoutes);
+// const passport = require("./config/passport");
+// app.use(passport.initialize());
+// app.use("/auth", require("./routes/authRoutes"));
+
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() =>
+    app.listen(process.env.PORT || 5000, () =>
+      console.log("✅ Server running & DB connected")
+    )
+  )
+  .catch((err) => console.error("❌ DB Connection Error:", err));

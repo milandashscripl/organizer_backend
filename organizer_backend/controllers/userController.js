@@ -1,357 +1,184 @@
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const transporter = require("../config/nodemailer");
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
-// ✅ Register
-// exports.registerUser = async (req, res) => {
-//   try {
-//     const { name, email, contact, address, password } = req.body;
-//     const hashedPassword = await bcrypt.hash(password, 10);
-//     const profilePicture = req.file?.path;
-
-//     const newUser = new User({
-//       name,
-//       email,
-//       contact,
-//       address,
-//       password: hashedPassword,
-//       profilePicture,
-//     });
-
-//     await newUser.save();
-//     res.status(201).json({ message: 'User registered successfully!' });
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// };
-
-
-// REGISTER
-exports.registerUser = async (req, res) => {
-  try {
-    const { name, email, password, address, contact } = req.body;
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser)
-      return res.status(400).json({ message: "Email already registered" });
-
-    const user = new User({
-      name,
-      email,
-      password,
-      address,
-      contact,
-      profilePicture: req.file ? req.file.path : "",
-    });
-
-    // Create verification token
-    const verificationToken = jwt.sign(
-      { email },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
-    user.verificationToken = verificationToken;
-
-    await user.save();
-
-    // Send verification email
-    const verifyUrl = `https://organizer-backend-gg1f.onrender.com/api/users/verify-email/${verificationToken}`;
-
-    await transporter.sendMail({
-      from: `"Organizer" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Verify your email",
-      html: `
-        <h2>Welcome, ${name}!</h2>
-        <p>Click the button below to verify your email:</p>
-        <a href="${verifyUrl}" 
-           style="display:inline-block;padding:10px 20px;background:#6a1b9a;color:white;border-radius:5px;text-decoration:none;">
-           Verify Email
-        </a>
-        <p>This link expires in 24 hours.</p>
-      `,
-    });
-
-    res.json({
-      message: "Registered successfully! Please check your email to verify your account.",
-    });
-  } catch (error) {
-    console.error("Register error:", error);
-    res.status(500).json({ message: "Registration failed" });
-  }
-};
-
-
-exports.verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.params;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ email: decoded.email });
-
-    if (!user) return res.status(400).send("Invalid token or user not found");
-    if (user.emailVerified) return res.send("Email already verified!");
-
-    user.emailVerified = true;
-    user.verificationToken = null;
-    await user.save();
-
-    res.send(`<h2>Email verified successfully!</h2><p>You can now log in to Organizer.</p>`);
-  } catch (err) {
-    res.status(400).send("Verification link expired or invalid.");
-  }
-};
-
-
-// ✅ Login
-// exports.loginUser = async (req, res) => {
-//   try {
-//     const { email, password } = req.body;
-//     const user = await User.findOne({ email });
-
-//     if (!user || !(await bcrypt.compare(password, user.password))) {
-//       return res.status(401).json({ message: 'Invalid credentials' });
-//     }
-
-//     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-//       expiresIn: '1h',
-//     });
-
-//     res.json({
-//       token,
-//       user: {
-//         _id: user._id,
-//         name: user.name,
-//         email: user.email,
-//         contact: user.contact,
-//         address: user.address,
-//         profilePicture: user.profilePicture,
-//       },
-//     });
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// };
-
+// LOGIN
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-
     if (!user) return res.status(400).json({ message: "User not found" });
-    if (user.password !== password)
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    if (!user.emailVerified) {
-      return res.status(403).json({
-        message: "Please verify your email before logging in.",
-      });
-    }
-
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
     res.json({ token, user });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: "Login failed" });
   }
 };
 
-
-// ✅ Get profile by ID
+// PROFILE
 exports.getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ Get current logged-in user (simplified)
-exports.getCurrentUser = async (req, res) => {
+// ✅ Get Friend Suggestions
+exports.getFriendSuggestions = async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'No token' });
+    const userId = req.params.userId;
+    const user = await User.findById(userId)
+      .populate("friends", "_id")
+      .populate("friendRequests", "_id")
+      .populate("sentRequests", "_id");
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
+    // Collect IDs to exclude
+    const excludeIds = [
+      user._id.toString(),
+      ...user.friends.map((f) => f._id.toString()),
+      ...user.friendRequests.map((r) => r._id.toString()),
+    ];
 
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    res.json(user);
+    // Find users who are not in excludeIds
+    const suggestions = await User.find({
+      _id: { $nin: excludeIds },
+    }).select("name email profilePicture");
+
+    res.json(suggestions);
   } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
+    console.error("❌ Error fetching friend suggestions:", err);
+    res.status(500).json({ message: err.message });
   }
 };
 
-
-exports.updateUser = async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const updateData = {};
-
-    // ✅ Basic text fields
-    if (req.body.name) updateData.name = req.body.name;
-    if (req.body.contact) updateData.contact = req.body.contact;
-    if (req.body.address) updateData.address = req.body.address;
-
-    // ✅ Handle password update
-    if (req.body.password) {
-      updateData.password = await bcrypt.hash(req.body.password, 10);
-    }
-
-    // ✅ Cloudinary auto upload: multer-storage-cloudinary gives you the URL
-    if (req.file && req.file.path) {
-      updateData.profilePicture = req.file.path; // secure Cloudinary URL
-    }
-
-    // ✅ Update user in MongoDB
-    const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json({
-      message: 'User updated successfully',
-      updatedUser,
-    });
-  } catch (error) {
-    console.error('Update user error:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-
-
-// ✅ Get all users
-exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find().select('-password');
-    res.status(200).json(users);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ✅ Send friend request
+// FRIEND SYSTEM
 exports.sendFriendRequest = async (req, res) => {
   try {
     const { currentUserId, friendId } = req.params;
-
     if (currentUserId === friendId)
-      return res.status(400).json({ message: "You can't add yourself" });
+      return res.status(400).json({ message: "Can't add yourself" });
 
     const user = await User.findById(currentUserId);
     const friend = await User.findById(friendId);
 
     if (!user || !friend)
-      return res.status(404).json({ message: 'User not found' });
-
-    if (user.friends.includes(friendId))
-      return res.status(400).json({ message: 'Already friends' });
+      return res.status(404).json({ message: "User not found" });
 
     if (friend.friendRequests.includes(currentUserId))
-      return res.status(400).json({ message: 'Request already sent' });
+      return res.status(400).json({ message: "Already sent" });
 
     friend.friendRequests.push(currentUserId);
+    user.sentRequests.push(friendId); // ✅ add this
+    await user.save();
     await friend.save();
 
-    res.status(200).json({ message: 'Friend request sent successfully' });
+    res.json({ message: "Request sent" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ Accept friend request
 exports.acceptFriendRequest = async (req, res) => {
   try {
     const { userId, friendId } = req.params;
-
     const user = await User.findById(userId);
     const friend = await User.findById(friendId);
 
     if (!user || !friend)
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
 
-    if (!user.friendRequests.includes(friendId))
-      return res.status(400).json({ message: 'No pending request from this user' });
-
-    user.friendRequests = user.friendRequests.filter(id => id.toString() !== friendId);
+    user.friendRequests = user.friendRequests.filter(
+      (id) => id.toString() !== friendId
+    );
     user.friends.push(friendId);
     friend.friends.push(userId);
 
     await user.save();
     await friend.save();
 
-    res.status(200).json({ message: 'Friend request accepted' });
+    res.json({ message: "Friend request accepted" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ Reject friend request
-exports.rejectFriendRequest = async (req, res) => {
-  try {
-    const { userId, friendId } = req.params;
-    const user = await User.findById(userId);
-
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    user.friendRequests = user.friendRequests.filter(id => id.toString() !== friendId);
-    await user.save();
-
-    res.status(200).json({ message: 'Friend request rejected' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// ✅ Get all friends
 exports.getFriends = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId)
-      .populate('friends', 'name email profilePicture');
-
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json(user.friends);
+    const user = await User.findById(req.params.userId).populate(
+      "friends",
+      "name email profilePicture"
+    );
+    res.json(user.friends);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ Get friend requests
 exports.getFriendRequests = async (req, res) => {
   try {
-    const user = await User.findById(req.params.userId)
-      .populate('friendRequests', 'name email profilePicture');
-
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.status(200).json(user.friendRequests);
+    const user = await User.findById(req.params.userId).populate(
+      "friendRequests",
+      "name email profilePicture"
+    );
+    res.json(user.friendRequests);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
+// ✅ Get Sent Friend Requests
+exports.getSentRequests = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId)
+      .populate("friendRequests", "_id")
+      .populate("friends", "_id")
+      .populate("sentRequests", "name email profilePicture");
 
-module.exports = {
-  registerUser: exports.registerUser,
-  loginUser: exports.loginUser,
-  getUserProfile: exports.getUserProfile,
-  getCurrentUser: exports.getCurrentUser,
-  updateUser: exports.updateUser,
-  getAllUsers: exports.getAllUsers,
-  sendFriendRequest: exports.sendFriendRequest,
-  acceptFriendRequest: exports.acceptFriendRequest,
-  rejectFriendRequest: exports.rejectFriendRequest,
-  getFriends: exports.getFriends,
-  getFriendRequests: exports.getFriendRequests,
-  verifyEmail: exports.verifyEmail
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user.sentRequests);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
+// ✅ Cancel Friend Request
+exports.cancelFriendRequest = async (req, res) => {
+  try {
+    const { userId, friendId } = req.params;
 
+    const user = await User.findById(userId);
+    const friend = await User.findById(friendId);
 
+    if (!user || !friend)
+      return res.status(404).json({ message: "User not found" });
+
+    // Remove friendId from user's sentRequests
+    user.sentRequests = user.sentRequests.filter(
+      (id) => id.toString() !== friendId
+    );
+
+    // Remove userId from friend's incoming requests
+    friend.friendRequests = friend.friendRequests.filter(
+      (id) => id.toString() !== userId
+    );
+
+    await user.save();
+    await friend.save();
+
+    res.json({ message: "Friend request cancelled" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
